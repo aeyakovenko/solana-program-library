@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import fs from "mz/fs";
 import {
   Account,
@@ -6,7 +9,9 @@ import {
   PublicKey,
   BPF_LOADER_PROGRAM_ID,
 } from "@solana/web3.js";
+import { Token } from "@solana/spl-token";
 
+import { TokenReserve } from "../client";
 import { Store } from "../client/util/store";
 import { newAccountWithLamports } from "../client/util/new-account-with-lamports";
 import { url } from "../client/util/url";
@@ -22,12 +27,74 @@ async function getConnection(): Promise<Connection> {
   return connection;
 }
 
+let tokenProgramId: PublicKey;
+let lendingProgramId: PublicKey;
+
 export async function loadPrograms(): Promise<void> {
   const connection = await getConnection();
-  const [tokenProgramId, tokenSwapProgramId] = await GetPrograms(connection);
+  [tokenProgramId, lendingProgramId] = await GetPrograms(connection);
 
-  console.log("Token Program ID", tokenProgramId.toString());
-  console.log("Token-swap Program ID", tokenSwapProgramId.toString());
+  console.log("SPL Token Program ID", tokenProgramId.toString());
+  console.log("SPL Token Lending Program ID", lendingProgramId.toString());
+}
+
+export async function createLendingReserve(): Promise<void> {
+  const connection = await getConnection();
+
+  const payer = await newAccountWithLamports(
+    connection,
+    100000000000 /* wag */
+  );
+
+  const owner = await newAccountWithLamports(
+    connection,
+    100000000000 /* wag */
+  );
+  const reserveAccount = new Account();
+
+  const [authority] = await PublicKey.findProgramAddress(
+    [reserveAccount.publicKey.toBuffer()],
+    lendingProgramId
+  );
+
+  console.log("creating liquidity token mint");
+  const liquidityTokenMint = await Token.createMint(
+    connection,
+    payer,
+    authority,
+    null,
+    2,
+    tokenProgramId
+  );
+
+  console.log("creating collateral token account");
+  const collateralToken = await liquidityTokenMint.createAccount(authority);
+
+  console.log("creating reserve token mint");
+  const reserveTokenMint = await Token.createMint(
+    connection,
+    payer,
+    owner.publicKey,
+    null,
+    2,
+    tokenProgramId
+  );
+
+  console.log("creating reserve token account");
+  const reserveToken = await reserveTokenMint.createAccount(authority);
+
+  console.log("creating token reserve");
+  await TokenReserve.create({
+    connection,
+    tokenProgramId,
+    reserveAccount,
+    reserveToken,
+    collateralToken,
+    // TODO cleanup after @solana/spl-token v0.0.12 is released
+    liquidityTokenMint: (liquidityTokenMint as any).publicKey,
+    lendingProgramId,
+    payer,
+  });
 }
 
 async function loadProgram(
@@ -90,7 +157,7 @@ async function GetPrograms(
     );
     await store.save("config.json", {
       tokenProgramId: tokenProgramId.toString(),
-      tokenSwapProgramId: tokenLendingProgramId.toString(),
+      tokenLendingProgramId: tokenLendingProgramId.toString(),
     });
   }
   return [tokenProgramId, tokenLendingProgramId];

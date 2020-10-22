@@ -3123,8 +3123,8 @@ dependencies = [
  "arrayref",
  "num-derive",
  "num-traits",
- "num_enum",
  "solana-program",
+ "spl-token 2.0.8",
  "thiserror",
 ]
 
