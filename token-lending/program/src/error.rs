@@ -13,6 +13,9 @@ pub enum LendingError {
     /// Lamport balance below rent-exempt threshold.
     #[error("Lamport balance below rent-exempt threshold")]
     NotRentExempt,
+    /// Invalid input passed in to instruction.
+    #[error("InvalidInput")]
+    InvalidInput,
     /// Invalid instruction number passed in.
     #[error("Invalid instruction")]
     InvalidInstruction,
