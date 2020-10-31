@@ -46,6 +46,21 @@ pub enum LendingError {
     /// Expected an SPL Token mint
     #[error("Input mint account is not valid")]
     ExpectedTokenMint,
+    /// Expected a Serum DEX market
+    #[error("Input dex market account is not valid")]
+    ExpectedDexMarket,
+    /// The reserve cannot be added a full pool
+    #[error("Cannot add reserve to full pool")]
+    PoolFull,
+    /// The reserve pools must be the same
+    #[error("Reserve pools do not match")]
+    PoolMismatch,
+    /// Reserve price is not set
+    #[error("Reserve price is not set")]
+    ReservePriceUnset,
+    /// Reserve price is expired
+    #[error("Reserve price is expired")]
+    ReservePriceExpired,
 }
 
 impl From<LendingError> for ProgramError {

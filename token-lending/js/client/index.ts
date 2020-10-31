@@ -22,13 +22,51 @@ const TOKEN_PROGRAM_ID = new PublicKey(
 /**
  * @private
  */
-export const TokenReserveLayout: typeof BufferLayout.Structure = BufferLayout.struct(
+export const LendingPoolLayout: typeof BufferLayout.Structure = BufferLayout.struct(
   [
     BufferLayout.u8("isInitialized"),
-    BufferLayout.u8("bumpSeed"),
+    Layout.publicKey("quoteTokenMint"),
+    BufferLayout.u8("numReserves"),
+    Layout.publicKey('reserve1'),
+    Layout.publicKey('reserve2'),
+    Layout.publicKey('reserve3'),
+    Layout.publicKey('reserve4'),
+    Layout.publicKey('reserve5'),
+    Layout.publicKey('reserve6'),
+    Layout.publicKey('reserve7'),
+    Layout.publicKey('reserve8'),
+    Layout.publicKey('reserve9'),
+    Layout.publicKey('reserve10'),
+  ]
+);
+
+/**
+ * @private
+ */
+export const PoolReserveLayout: typeof BufferLayout.Structure = BufferLayout.struct(
+  [
+    BufferLayout.u8("isInitialized"),
+    Layout.publicKey("pool"),
     Layout.publicKey("reserveToken"),
     Layout.publicKey("collateralToken"),
     Layout.publicKey("liquidityTokenMint"),
+    Layout.publicKey("dexMarket"),
+    BufferLayout.u64("marketPrice"),
+    BufferLayout.u64("marketPriceUpdatedSlot"),
+  ]
+);
+
+/**
+ * @private
+ */
+export const BorrowObligationLayout: typeof BufferLayout.Structure = BufferLayout.struct(
+  [
+    BufferLayout.u64("createdAtSlot"),
+    Layout.publicKey("authority"),
+    BufferLayout.u64("collateralAmount"),
+    Layout.publicKey("collateralReserve"),
+    BufferLayout.u64("borrowAmount"),
+    Layout.publicKey("borrowReserve"),
   ]
 );
 
@@ -36,21 +74,24 @@ export type TokenLendingPoolParams = {
   connection: Connection;
   tokenProgramId?: PublicKey;
   lendingProgramId?: PublicKey;
-  reserves: Array<TokenReserve>;
+  quoteTokenMint: PublicKey;
+  reserves: Array<PoolReserve>;
   payer: Account;
 };
 
 export class TokenLendingPool {
   connection: Connection;
-  reserves: Array<TokenReserve>;
+  reserves: Array<PoolReserve>;
+  quoteTokenMint: PublicKey;
 
   constructor(params: TokenLendingPoolParams) {
     this.connection = params.connection;
     this.reserves = params.reserves;
+    this.quoteTokenMint = params.quoteTokenMint;
   }
 }
 
-export type TokenReserveParams = {
+export type PoolReserveParams = {
   connection: Connection;
   tokenProgramId?: PublicKey;
   lendingProgramId: PublicKey;
@@ -70,7 +111,7 @@ export type InitReserveInstructionParams = {
   lendingProgramId: PublicKey;
 };
 
-export class TokenReserve {
+export class PoolReserve {
   connection: Connection;
   tokenProgramId: PublicKey;
   lendingProgramId: PublicKey;
@@ -80,7 +121,7 @@ export class TokenReserve {
   liquidityTokenMint: PublicKey;
   payer: Account;
 
-  constructor(params: TokenReserveParams) {
+  constructor(params: PoolReserveParams) {
     this.connection = params.connection;
     this.tokenProgramId = params.tokenProgramId || TOKEN_PROGRAM_ID;
     this.lendingProgramId = params.lendingProgramId;
@@ -91,39 +132,39 @@ export class TokenReserve {
     this.payer = params.payer;
   }
 
-  static async create(params: TokenReserveParams): Promise<TokenReserve> {
-    const tokenReserve = new TokenReserve(params);
+  static async create(params: PoolReserveParams): Promise<PoolReserve> {
+    const poolReserve = new PoolReserve(params);
 
     // Allocate memory for the account
-    const balanceNeeded = await TokenReserve.getMinBalanceRentForExemptTokenReserve(
-      tokenReserve.connection
+    const balanceNeeded = await PoolReserve.getMinBalanceRentForExemptPoolReserve(
+      poolReserve.connection
     );
 
     const transaction = new Transaction()
       .add(
         SystemProgram.createAccount({
-          fromPubkey: tokenReserve.payer.publicKey,
-          newAccountPubkey: tokenReserve.reserveAccount.publicKey,
+          fromPubkey: poolReserve.payer.publicKey,
+          newAccountPubkey: poolReserve.reserveAccount.publicKey,
           lamports: balanceNeeded,
-          space: TokenReserveLayout.span,
-          programId: tokenReserve.lendingProgramId,
+          space: PoolReserveLayout.span,
+          programId: poolReserve.lendingProgramId,
         })
       )
       .add(
-        await TokenReserve.createInitReserveInstruction({
-          ...tokenReserve,
-          reserveAccount: tokenReserve.reserveAccount.publicKey,
+        await PoolReserve.createInitReserveInstruction({
+          ...poolReserve,
+          reserveAccount: poolReserve.reserveAccount.publicKey,
         })
       );
 
     await sendAndConfirmTransaction(
-      tokenReserve.connection,
+      poolReserve.connection,
       transaction,
-      [tokenReserve.payer, tokenReserve.reserveAccount],
+      [poolReserve.payer, poolReserve.reserveAccount],
       { commitment: "singleGossip", preflightCommitment: "singleGossip" }
     );
 
-    return tokenReserve;
+    return poolReserve;
   }
 
   /**
@@ -131,11 +172,11 @@ export class TokenReserve {
    *
    * @return Number of lamports required
    */
-  static async getMinBalanceRentForExemptTokenReserve(
+  static async getMinBalanceRentForExemptPoolReserve(
     connection: Connection
   ): Promise<number> {
     return await connection.getMinimumBalanceForRentExemption(
-      TokenReserveLayout.span
+      PoolReserveLayout.span
     );
   }
 

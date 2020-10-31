@@ -28,14 +28,16 @@ async function getConnection(): Promise<Connection> {
 }
 
 let tokenProgramId: PublicKey;
-let lendingProgramId: PublicKey;
+let tokenLendingProgramId: PublicKey;
+let serumDexProgramId: PublicKey;
 
 export async function loadPrograms(): Promise<void> {
   const connection = await getConnection();
-  [tokenProgramId, lendingProgramId] = await GetPrograms(connection);
+  ({tokenProgramId, tokenLendingProgramId, serumDexProgramId} = await GetPrograms(connection));
 
   console.log("SPL Token Program ID", tokenProgramId.toString());
-  console.log("SPL Token Lending Program ID", lendingProgramId.toString());
+  console.log("SPL Token Lending Program ID", tokenLendingProgramId.toString());
+  console.log("Serum DEX Program ID", serumDexProgramId.toString());
 }
 
 export async function createLendingReserve(): Promise<void> {
@@ -54,7 +56,7 @@ export async function createLendingReserve(): Promise<void> {
 
   const [authority] = await PublicKey.findProgramAddress(
     [reserveAccount.publicKey.toBuffer()],
-    lendingProgramId
+    tokenLendingProgramId
   );
 
   console.log("creating liquidity token mint");
@@ -92,7 +94,7 @@ export async function createLendingReserve(): Promise<void> {
     collateralToken,
     // TODO cleanup after @solana/spl-token v0.0.12 is released
     liquidityTokenMint: (liquidityTokenMint as any).publicKey,
-    lendingProgramId,
+    lendingProgramId: tokenLendingProgramId,
     payer,
   });
 }
@@ -130,35 +132,42 @@ async function loadProgram(
 
 async function GetPrograms(
   connection: Connection
-): Promise<[PublicKey, PublicKey]> {
+): Promise<{tokenProgramId: PublicKey, tokenLendingProgramId: PublicKey, serumDexProgramId: PublicKey}> {
   const store = new Store();
   let tokenProgramId = null;
   let tokenLendingProgramId = null;
+  let serumDexProgramId = null;
   try {
     const config = await store.load("config.json");
-    console.log("Using pre-loaded Token and Token-lending programs");
+    console.log("Using pre-loaded programs");
     console.log(
       "  Note: To reload programs remove client/util/store/config.json"
     );
-    if ("tokenProgramId" in config && "tokenLendingProgramId" in config) {
+    if ("tokenProgramId" in config && "tokenLendingProgramId" in config && "serumDexProgramId" in config) {
       tokenProgramId = new PublicKey(config["tokenProgramId"]);
       tokenLendingProgramId = new PublicKey(config["tokenLendingProgramId"]);
+      serumDexProgramId = new PublicKey(config["serumDexProgramId"]);
     } else {
       throw new Error("Program ids not found");
     }
   } catch (err) {
     tokenProgramId = await loadProgram(
       connection,
-      "../../target/bpfel-unknown-unknown/release/spl_token.so"
+      "../../token/program/spl_token.so"
     );
     tokenLendingProgramId = await loadProgram(
       connection,
-      "../../target/bpfel-unknown-unknown/release/spl_token_lending.so"
+      "./spl_token_lending.so"
+    );
+    serumDexProgramId = await loadProgram(
+      connection,
+      "./serum_dex.so"
     );
     await store.save("config.json", {
       tokenProgramId: tokenProgramId.toString(),
       tokenLendingProgramId: tokenLendingProgramId.toString(),
+      serumDexProgramId: serumDexProgramId.toString(),
     });
   }
-  return [tokenProgramId, tokenLendingProgramId];
+  return {tokenProgramId, tokenLendingProgramId, serumDexProgramId};
 }
