@@ -3098,6 +3098,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "spl-oracle-pool"
+version = "0.1.0"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "enumflags2",
+ "num-derive",
+ "num-traits",
+ "safe-transmute",
+ "solana-program",
+ "spl-token 2.0.8",
+ "thiserror",
+]
+
+[[package]]
 name = "spl-shared-memory"
 version = "2.0.6"
 dependencies = [

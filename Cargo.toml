@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "memo/program",
+  "oracle-pool/program",
   "shared-memory/program",
   "stake-pool/program",
   "themis/program_ristretto",
