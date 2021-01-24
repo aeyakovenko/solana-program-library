@@ -13,14 +13,15 @@ default = ["elgamal_ristretto/program"]
 
 [dependencies]
 bincode = "1.3"
-borsh = "0.7.1"
+borsh = "0.8.1"
 curve25519-dalek = { git = "https://github.com/garious/curve25519-dalek", rev = "60efef3553d6bf3d7f3b09b5f97acd54d72529ff", features = ["borsh"] }
 elgamal_ristretto = { git = "https://github.com/garious/elgamal", rev = "db1eef8e01b8a6e93d3bdc64ab2c1acb39cb64d6", default-features = false }
 getrandom = { version = "0.1.15", features = ["dummy"] }
 num-derive = "0.3"
 num-traits = "0.2"
 rand = "0.7.0"
-solana-program = "1.4.4"
+solana-program = "1.5.1"
+subtle = "=2.2.3"
 thiserror = "1.0"
 
 [lib]
