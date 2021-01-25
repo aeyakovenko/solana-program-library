@@ -20,7 +20,7 @@ serum_dex = { git = "https://github.com/project-serum/serum-dex", rev = "991a86e
 solana-program = "1.5.1"
 spl-token = { path = "../../token/program", features = [ "no-entrypoint" ] }
 thiserror = "1.0"
-uint = "0.8"
+uint = "0.9"
 
 [dev-dependencies]
 assert_matches = "1.4.0"
